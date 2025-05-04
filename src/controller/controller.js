@@ -1,18 +1,37 @@
 import url_schema from "../models/UrlSchema.js";
-
-export const createShortUrl=async(req,res)=>{
-    const {originalUrl}=req.body;
-    if(!originalUrl){
-        return res.status(400).json({error:"Please provide a valid url"})    
-    }        
+import { nanoid } from "nanoid";
+export const createUrl=async (req, res) => {
     try {
-        let url=await url_schema.findOne({originalUrl})
-        if(url){
-            return res.status(200).json({shortUrl:url.shortUrl})
-        }
-        url=await url_schema.create({originalUrl})
-        return res.status(200).json({shortUrl:url.shortUrl})
+      const { originalUrl } = req.body;
+      const shortUrl = nanoid(6);
+      const url = new url_schema({
+        originalUrl,
+        shortUrl,
+      });
+      await url.save();
+      res.json({shortUrl:`${req.protocol}://${req.get("host")}/${shortUrl}`});
     } catch (error) {
-        return res.status(500).json({error:"Server error"})
+      res.status(500).json({ message: "Error creating short URL" });
     }
+}
+export const Welcome=async (req, res) => {
+  try {
+    res.json({ message: "Welcome to the URL Shortener API" });
+  } catch (error) {
+     res.json({message:"Error in the server"})
+     console.log(error)
+  }
+} 
+export const redirectUrl=async (req, res) => {
+  try{
+    const { shortUrl } = req.params;
+    const url = await url_schema.findOne({ shortUrl });
+    if (!url) {
+      return res.status(404).json({ message: "URL not found" });
+    }
+    res.redirect(url.originalUrl);
+  }catch (error) {
+    res.json({message:"Error in the server"})
+    console.log(error)
+  }
 }
